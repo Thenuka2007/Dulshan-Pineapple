@@ -7,8 +7,8 @@ import io
 st.set_page_config(page_title="Dulshan Pineapple", layout="wide")
 
 # පරිශීලක තොරතුරු
-USER_EMAIL = "dulshan@pineapple.com"
-USER_PASSWORD = "mysecretpassword123"
+USER_EMAIL = "dulshanpineapple.com"
+USER_PASSWORD = "Dulshanpineapple"
 
 # සැසිය ආරම්භ කිරීම (Session State)
 if "logged_in" not in st.session_state:
