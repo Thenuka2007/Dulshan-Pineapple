@@ -8,7 +8,7 @@ from reportlab.lib import colors
 import io
 
 # පිටුවේ සැකසුම් (Page Configuration)
-st.set_page_config(page_title=Dulshan Pineapple - Management System, page_icon=🍍, layout=wide)
+st.set_page_config(page_title="Dulshan Pineapple - Management System", page_icon="🍍", layout="wide")
 
 # පරිශීලක අක්තපත්‍ර (Credentials - මෙතැනින් ඔබට Email සහ Password වෙනස් කළ හැක)
 USER_EMAIL = dulshan@pineapple.com
