@@ -23,7 +23,7 @@ if data not in st.get_state()
 
 # 1. Login පිටුව
 def login_page()
-    st.markdown(h2 style='text-align center; color #FFA500;'🍍 දුල්ශාන් අන්නාසි (Dulshan Pineapple) 🍍h2, unsafe_allow_type=True)
+    st.markdown("<h2 style='text-align: center; color: #FFA500;'>🍍 දුල්ශාන් අන්නාසි (Dulshan Pineapple) 🍍</h2>", unsafe_allow_type=True)
     st.markdown(h4 style='text-align center;'කළමනාකරණ පද්ධතියට ඇතුළු වීමh4, unsafe_allow_type=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
