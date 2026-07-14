@@ -10,35 +10,130 @@ from reportlab.lib import colors
 # පිටුවේ සැකසුම්
 st.set_page_config(page_title="Dulshan Pineapple", layout="wide")
 
-# ආරක්ෂිතව මුරපද පරීක්ෂා කිරීම (Streamlit Secrets හරහා හෝ default අගයන්)
-USER_EMAIL = st.secrets.get("USER_EMAIL", "dulshanpineapple.com")
-USER_PASSWORD = st.secrets.get("USER_PASSWORD", "dulshanpineapple")
+USER_EMAIL = "dulshanpineapple.com"
+USER_PASSWORD = "dulshanpineapple"
+
+# භාෂා සැකසුම් (Translations)
+if "lang" not in st.session_state:
+    st.session_state["lang"] = "Sinhala"
+
+# භාෂා පරිවර්තන එකතුව
+T = {
+    "Sinhala": {
+        "title": "🍍 දුල්ශාන් අන්නාසි ව්‍යාපාර කළමනාකරණය",
+        "subtitle": "සුරක්ෂිත කළමනාකරණ පද්ධතිය",
+        "login": "ඇතුළු වන්න",
+        "logout": "ඉවත් වන්න",
+        "tab_entry": "දත්ත ඇතුළත් කිරීම",
+        "tab_reports": "වාර්තා සහ PDF",
+        "tab_manage": "දත්ත කළමනාකරණය",
+        "add_trans": "නව ගනුදෙනුවක් ඇතුළත් කරන්න",
+        "date": "දිනය",
+        "type": "ගනුදෙනු වර්ගය",
+        "desc": "විස්තරය",
+        "qty": "ඒකක ගණන (QTY - kg)",
+        "unit_price": "ඒකකයක මිල (රු.)",
+        "pay_method": "ගෙවීම් ක්‍රමය",
+        "cheque_no": "චෙක්පත් අංකය (චෙක්පත් නම් පමණක්)",
+        "cheque_date": "චෙක්පත් දිනය (චෙක්පත් නම් පමණක්)",
+        "save_btn": "දත්ත සුරකින්න",
+        "sales": "විකිණීම",
+        "purchase": "මිලදී ගැනීම",
+        "expenses": "වියදම්",
+        "cash": "අත්පිට මුදල්",
+        "cheque": "චෙක්පත්",
+        "success_save": "දත්ත සාර්ථකව සුරැකිණි!",
+        "total_amt": "මුළු මුදල",
+        "select_month": "වාර්තාව අවශ්‍ය මාසය තෝරන්න",
+        "tot_purchase": "මුළු මිලදී ගැනීම්",
+        "tot_sales": "මුළු විකුණුම්",
+        "net_profit": "ශුද්ධ ලාභය",
+        "pdf_btn": "PDF වාර්තාව සාදන්න",
+        "pdf_download": "PDF එක බාගත කරගන්න",
+        "no_data": "තවමත් දත්ත ඇතුළත් කර නොමැත.",
+        "delete_title": "වැරදුණු ගනුදෙනුවක් මකා දමන්න",
+        "delete_select": "මකා දැමිය යුතු ගනුදෙනුව තෝරන්න",
+        "delete_btn": "තෝරාගත් ගනුදෙනුව මකා දමන්න",
+        "delete_success": "ගනුදෙනුව සාර්ථකව මකා දමන ලදී!"
+    },
+    "English": {
+        "title": "🍍 Dulshan Pineapple Management",
+        "subtitle": "Secure Management System",
+        "login": "Login",
+        "logout": "Logout",
+        "tab_entry": "Data Entry",
+        "tab_reports": "Reports & PDF",
+        "tab_manage": "Manage Data",
+        "add_trans": "Add New Transaction",
+        "date": "Date",
+        "type": "Transaction Type",
+        "desc": "Description",
+        "qty": "Quantity (QTY - kg)",
+        "unit_price": "Unit Price (Rs.)",
+        "pay_method": "Payment Method",
+        "cheque_no": "Cheque Number (If Cheque)",
+        "cheque_date": "Cheque Date (If Cheque)",
+        "save_btn": "Save Data",
+        "sales": "Sale",
+        "purchase": "Purchase",
+        "expenses": "Expenses",
+        "cash": "Cash",
+        "cheque": "Cheque",
+        "success_save": "Data saved successfully!",
+        "total_amt": "Total Amount",
+        "select_month": "Select Month for Report",
+        "tot_purchase": "Total Purchases",
+        "tot_sales": "Total Sales",
+        "net_profit": "Net Profit",
+        "pdf_btn": "Generate PDF Report",
+        "pdf_download": "Download PDF",
+        "no_data": "No data available yet.",
+        "delete_title": "Delete a Transaction",
+        "delete_select": "Select Transaction to Delete",
+        "delete_btn": "Delete Selected Transaction",
+        "delete_success": "Transaction deleted successfully!"
+    }
+}
 
 # සැසිය ආරම්භ කිරීම
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
+
+REQUIRED_COLUMNS = [
+    "ID", "Date", "Type", "Description", "QTY (kg)", "Unit Price (Rs)", "Amount (Rs)", "Payment Method", "Cheque No", "Cheque Date"
+]
+
 if "data" not in st.session_state:
-    st.session_state["data"] = pd.DataFrame(columns=[
-        "ID", "Date (දිනය)", "Type (වර්ගය)", "Description (විස්තරය)", 
-        "QTY (kg) (ප්‍රමාණය)", "Unit Price (Rs) (ඒකක මිල)", "Amount (Rs) (මුළු මුදල)", 
-        "Payment Method (ගෙවීම් ක්‍රමය)", "Cheque No (චෙක් අංකය)", "Cheque Date (චෙක් දිනය)"
-    ])
+    try:
+        loaded_df = pd.read_csv("dulshan_pineapple_backup.csv")
+        if not all(col in loaded_df.columns for col in REQUIRED_COLUMNS):
+            st.session_state["data"] = pd.DataFrame(columns=REQUIRED_COLUMNS)
+        else:
+            st.session_state["data"] = loaded_df
+    except Exception:
+        st.session_state["data"] = pd.DataFrame(columns=REQUIRED_COLUMNS)
+
+# භාෂාව තෝරාගැනීමේ Sidebar එක
+with st.sidebar:
+    st.session_state["lang"] = st.selectbox("Language / භාෂාව", ["Sinhala", "English"])
+    st.write("---")
+
+lang = st.session_state["lang"]
 
 # 1. Login පිටුව
 def login_page():
-    st.markdown("<h2 style='text-align: center; color: #FFA500;'>🍍 Dulshan Pineapple (දුල්ශාන් අන්නාසි) 🍍</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center;'>Secure Management System / සුරක්ෂිත කළමනාකරණ පද්ධතිය</p>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align: center; color: #FFA500;'>{T[lang]['title']}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align: center;'>{T[lang]['subtitle']}</p>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        email = st.text_input("Email / ඊමේල් ලිපිනය")
-        password = st.text_input("Password / මුරපදය", type="password")
-        login_btn = st.button("Login / ඇතුළු වන්න", use_container_width=True)
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
+        login_btn = st.button(T[lang]["login"], use_container_width=True)
         
         if login_btn:
             if email == USER_EMAIL and password == USER_PASSWORD:
                 st.session_state["logged_in"] = True
-                st.success("Logged in successfully! / සාර්ථකව ඇතුළු විය!")
                 st.rerun()
             else:
                 st.error("Invalid credentials! / ඇතුළත් කළ තොරතුරු වැරදියි!")
@@ -47,94 +142,87 @@ def login_page():
 def main_app():
     col1, col2 = st.columns([8, 2])
     with col1:
-        st.title("🍍 Dulshan Pineapple Management")
+        st.title(T[lang]["title"])
     with col2:
-        if st.button("Logout / ඉවත් වන්න"):
+        if st.button(T[lang]["logout"]):
             st.session_state["logged_in"] = False
             st.rerun()
 
-    tab1, tab2, tab3 = st.tabs([
-        "Data Entry / දත්ත ඇතුළත් කිරීම", 
-        "Reports & PDF / වාර්තා සහ PDF", 
-        "Manage Data / දත්ත මකා දැමීම සහ බැලීම"
-    ])
+    tab1, tab2, tab3 = st.tabs([T[lang]["tab_entry"], T[lang]["tab_reports"], T[lang]["tab_manage"]])
 
     # Tab 1: දත්ත ඇතුළත් කිරීම
     with tab1:
-        st.subheader("Add New Transaction / නව ගනුදෙනුවක් ඇතුළත් කරන්න")
+        st.subheader(T[lang]["add_trans"])
         with st.form("entry_form", clear_on_submit=True):
-            date = st.date_input("Date / දිනය", datetime.date.today())
-            trans_type = st.selectbox("Type / වර්ගය", ["Sale / විකිණීම", "Purchase / මිලදී ගැනීම", "Expenses / වියදම්"])
-            desc = st.text_input("Description / විස්තරය")
+            date = st.date_input(T[lang]["date"], datetime.date.today())
+            trans_type = st.selectbox(T[lang]["type"], [T[lang]["sales"], T[lang]["purchase"], T[lang]["expenses"]])
+            desc = st.text_input(T[lang]["desc"])
             
-            qty = st.number_input("QTY (kg) / ඒකක ගණන", min_value=0.0, step=0.1, value=0.0)
-            unit_price = st.number_input("Unit Price (Rs) / ඒකකයක මිල", min_value=0.0, step=1.0, value=0.0)
+            qty = st.number_input(T[lang]["qty"], min_value=0.0, step=0.1, value=0.0)
+            unit_price = st.number_input(T[lang]["unit_price"], min_value=0.0, step=1.0, value=0.0)
             
-            pay_method = st.selectbox("Payment Method / ගෙවීම් ක්‍රමය", ["Cash / අත්පිට මුදල්", "Cheque / චෙක්පත්"])
+            pay_method = st.selectbox(T[lang]["pay_method"], [T[lang]["cash"], T[lang]["cheque"]])
             
-            # චෙක්පත් විස්තර (චෙක්පත් තෝරාගතහොත් පමණක් ඇතුළත් කිරීමට)
-            cheque_no = st.text_input("If Cheque, Cheque No / චෙක්පත් අංකය (චෙක්පත් නම් පමණක්)")
-            cheque_date = st.date_input("If Cheque, Cheque Date / චෙක්පත් දිනය", datetime.date.today())
+            cheque_no = st.text_input(T[lang]["cheque_no"])
+            cheque_date = st.date_input(T[lang]["cheque_date"], datetime.date.today())
             
-            submit = st.form_submit_button("Save Data / දත්ත සුරකින්න")
+            submit = st.form_submit_button(T[lang]["save_btn"])
             
             if submit:
-                # මුළු මුදල ගණනය කිරීම
                 if qty > 0:
                     calculated_amount = qty * unit_price
                 else:
                     calculated_amount = unit_price
                 
-                # චෙක්පත් නොවේ නම් විස්තර හිස් කිරීම
-                final_cheque_no = cheque_no if pay_method == "Cheque / චෙක්පත්" else "-"
-                final_cheque_date = cheque_date.strftime("%Y-%m-%d") if pay_method == "Cheque / චෙක්පත්" else "-"
+                final_cheque_no = cheque_no if pay_method == T[lang]["cheque"] else "-"
+                final_cheque_date = cheque_date.strftime("%Y-%m-%d") if pay_method == T[lang]["cheque"] else "-"
                 
-                # අද්විතීය ID එකක් සෑදීම
                 unique_id = int(datetime.datetime.now().timestamp())
                 
                 new_row = {
                     "ID": unique_id,
-                    "Date (දිනය)": date.strftime("%Y-%m-%d"),
-                    "Type (වර්ගය)": trans_type,
-                    "Description (විස්තරය)": desc,
-                    "QTY (kg) (ප්‍රමාණය)": qty,
-                    "Unit Price (Rs) (ඒකක මිල)": unit_price,
-                    "Amount (Rs) (මුළු මුදල)": calculated_amount,
-                    "Payment Method (ගෙවීම් ක්‍රමය)": pay_method,
-                    "Cheque No (චෙක් අංකය)": final_cheque_no,
-                    "Cheque Date (චෙක් දිනය)": final_cheque_date
+                    "Date": date.strftime("%Y-%m-%d"),
+                    "Type": trans_type,
+                    "Description": desc,
+                    "QTY (kg)": qty,
+                    "Unit Price (Rs)": unit_price,
+                    "Amount (Rs)": calculated_amount,
+                    "Payment Method": pay_method,
+                    "Cheque No": final_cheque_no,
+                    "Cheque Date": final_cheque_date
                 }
-                st.session_state["data"] = pd.concat([st.session_state["data"], pd.DataFrame([new_row])], ignore_index=True)
-                st.success(f"Saved! Total Amount: Rs. {calculated_amount:,.2f} / දත්ත සුරැකිණි!")
+                
+                df_to_add = pd.DataFrame([new_row])[REQUIRED_COLUMNS]
+                st.session_state["data"] = pd.concat([st.session_state["data"][REQUIRED_COLUMNS], df_to_add], ignore_index=True)
+                st.success(f"{T[lang]['success_save']} {T[lang]['total_amt']}: Rs. {calculated_amount:,.2f}")
                 st.session_state["data"].to_csv("dulshan_pineapple_backup.csv", index=False)
 
     # Tab 2: මාසික වාර්තා සහ PDF
     with tab2:
-        st.subheader("Monthly Reports / මාසික වාර්තා")
+        st.subheader(T[lang]["tab_reports"])
         df = st.session_state["data"]
         
-        if not df.empty:
-            # දින අනුව ගොනු සකස් කිරීම
+        if not df.empty and len(df) > 0:
             df_temp = df.copy()
-            df_temp['Date_Parsed'] = pd.to_datetime(df_temp['Date (දිනය)'])
+            df_temp['Date_Parsed'] = pd.to_datetime(df_temp['Date'])
             df_temp['YearMonth'] = df_temp['Date_Parsed'].dt.to_period('M').astype(str)
             available_months = sorted(df_temp['YearMonth'].unique(), reverse=True)
             
-            selected_month = st.selectbox("Select Month for Report / වාර්තාව අවශ්‍ය මාසය තෝරන්න", available_months)
+            selected_month = st.selectbox(T[lang]["select_month"], available_months)
             
             filtered_df = df_temp[df_temp['YearMonth'] == selected_month].copy()
             filtered_df = filtered_df.drop(columns=['Date_Parsed', 'YearMonth'])
             
-            purchases = filtered_df[filtered_df["Type (වර්ගය)"] == "Purchase / මිලදී ගැනීම"]["Amount (Rs) (මුළු මුදල)"].sum()
-            sales = filtered_df[filtered_df["Type (වර්ගය)"] == "Sale / විකිණීම"]["Amount (Rs) (මුළු මුදල)"].sum()
-            expenses = filtered_df[filtered_df["Type (වර්ගය)"] == "Expenses / වියදම්"]["Amount (Rs) (මුළු මුදල)"].sum()
+            purchases = filtered_df[filtered_df["Type"] == T[lang]["purchase"]]["Amount (Rs)"].sum()
+            sales = filtered_df[filtered_df["Type"] == T[lang]["sales"]]["Amount (Rs)"].sum()
+            expenses = filtered_df[filtered_df["Type"] == T[lang]["expenses"]]["Amount (Rs)"].sum()
             net_profit = sales - (purchases + expenses)
 
             col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Total Purchases / මුළු මිලදී ගැනීම්", f"Rs. {purchases:,.2f}")
-            col2.metric("Total Sales / මුළු විකුණුම්", f"Rs. {sales:,.2f}")
-            col3.metric("Expenses / වියදම්", f"Rs. {expenses:,.2f}")
-            col4.metric("Net Profit / ශුද්ධ ලාභය", f"Rs. {net_profit:,.2f}")
+            col1.metric(T[lang]["tot_purchase"], f"Rs. {purchases:,.2f}")
+            col2.metric(T[lang]["tot_sales"], f"Rs. {sales:,.2f}")
+            col3.metric(T[lang]["expenses"], f"Rs. {expenses:,.2f}")
+            col4.metric(T[lang]["net_profit"], f"Rs. {net_profit:,.2f}")
 
             def generate_pdf(dataframe, month_name):
                 buffer = io.BytesIO()
@@ -146,7 +234,6 @@ def main_app():
                 elements.append(title)
                 elements.append(Spacer(1, 20))
                 
-                # PDF එකට අනවශ්‍ය ID තීරුව ඉවත් කර වගුව හැදීම
                 pdf_df = dataframe.drop(columns=["ID"])
                 table_data = [list(pdf_df.columns)] + pdf_df.values.tolist()
                 
@@ -166,40 +253,39 @@ def main_app():
                 buffer.seek(0)
                 return buffer
 
-            if st.button("Generate PDF / PDF වාර්තාව සකසන්න"):
+            if st.button(T[lang]["pdf_btn"]):
                 pdf_data = generate_pdf(filtered_df, selected_month)
                 st.download_button(
-                    label="Download PDF / PDF එක බාගත කරගන්න",
+                    label=T[lang]["pdf_download"],
                     data=pdf_data,
                     file_name=f"Dulshan_Pineapple_Report_{selected_month}.pdf",
                     mime="application/pdf"
                 )
         else:
-            st.info("No data available yet. / තවමත් දත්ත ඇතුළත් කර නොමැත.")
+            st.info(T[lang]["no_data"])
 
     # Tab 3: දත්ත බැලීම සහ මකා දැමීම
     with tab3:
-        st.subheader("All Transactions / සියලුම ගනුදෙනු විස්තර")
+        st.subheader(T[lang]["tab_manage"])
         df = st.session_state["data"]
         
-        if not df.empty:
-            st.dataframe(df, use_container_width=True)
+        if not df.empty and len(df) > 0:
+            st.dataframe(df[REQUIRED_COLUMNS], use_container_width=True)
             
             st.write("---")
-            st.subheader("Delete a Transaction / වැරදුණු ගනුදෙනුවක් මකා දමන්න")
+            st.subheader(T[lang]["delete_title"])
             
-            # මකා දැමීම සඳහා ID එක තෝරා ගැනීම
-            delete_id = st.selectbox("Select Date & Description to Delete / මකා දැමිය යුතු ගනුදෙනුව තෝරන්න", 
+            delete_id = st.selectbox(T[lang]["delete_select"], 
                                     options=df["ID"].tolist(),
-                                    format_func=lambda x: f"ID: {x} | {df[df['ID'] == x]['Date (දිනය)'].values[0]} - {df[df['ID'] == x]['Description (විස්තරය)'].values[0]}")
+                                    format_func=lambda x: f"ID: {x} | {df[df['ID'] == x]['Date'].values[0]} - {df[df['ID'] == x]['Description'].values[0]}")
             
-            if st.button("Delete Selected Transaction / තෝරාගත් ගනුදෙනුව මකා දමන්න", type="primary"):
+            if st.button(T[lang]["delete_btn"], type="primary"):
                 st.session_state["data"] = df[df["ID"] != delete_id]
-                st.success("Transaction deleted successfully! / ගනුදෙනුව සාර්ථකව මකා දමන ලදී!")
+                st.success(T[lang]["delete_success"])
                 st.session_state["data"].to_csv("dulshan_pineapple_backup.csv", index=False)
                 st.rerun()
         else:
-            st.info("No data available yet. / තවමත් දත්ත ඇතුළත් කර නොමැත.")
+            st.info(T[lang]["no_data"])
 
 if st.session_state["logged_in"]:
     main_app()
