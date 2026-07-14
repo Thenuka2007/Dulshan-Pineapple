@@ -10,14 +10,15 @@ from reportlab.lib import colors
 # පිටුවේ සැකසුම්
 st.set_page_config(page_title="Dulshan Pineapple", layout="wide")
 
-USER_EMAIL = "Dulshanpineapple.com"
-USER_PASSWORD = "Dulshan"
+USER_EMAIL = "dulshanpineapple.com"
+USER_PASSWORD = "dulshanpineapple"
 
 # සැසිය ආරම්භ කිරීම
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "data" not in st.session_state:
-    st.session_state["data"] = pd.DataFrame(columns=["Date", "Type", "Description", "QTY (kg)", "Amount (Rs)"])
+    # නව තීරු: Unit Price එකතු කර ඇත
+    st.session_state["data"] = pd.DataFrame(columns=["Date", "Type", "Description", "QTY (kg)", "Unit Price (Rs)", "Amount (Rs)"])
 
 # 1. Login පිටුව
 def login_page():
@@ -55,21 +56,30 @@ def main_app():
             date = st.date_input("Date", datetime.date.today())
             trans_type = st.selectbox("Type", ["Purchase", "Sale", "Expenses"])
             desc = st.text_input("Description")
-            qty = st.number_input("QTY (kg)", min_value=0.0, step=0.1)
-            amount = st.number_input("Amount (Rs)", min_value=0.0, step=100.0)
+            
+            # නව කොටස්: ඒකක ගණන සහ ඒකකයක මිල
+            qty = st.number_input("QTY (kg) / ඒකක ගණන", min_value=0.0, step=0.1, value=0.0)
+            unit_price = st.number_input("Unit Price (Rs) / ඒකකයක මිල", min_value=0.0, step=1.0, value=0.0)
             
             submit = st.form_submit_button("Add Data")
             
             if submit:
+                # ස්වයංක්‍රීයව වැඩි වී මුළු මුදල හැදේ (වෙනත් වියදමක් නම් ඒකක ගණන 0 විය හැක, එවිට unit_price එකම මුළු මුදල වේ)
+                if qty > 0:
+                    calculated_amount = qty * unit_price
+                else:
+                    calculated_amount = unit_price  # වියදම් සඳහා Qty එක 0 නම් කෙලින්ම මිල ඇතුලත් කල හැක
+                
                 new_row = {
                     "Date": date.strftime("%Y-%m-%d"),
                     "Type": trans_type,
                     "Description": desc,
                     "QTY (kg)": qty,
-                    "Amount (Rs)": amount
+                    "Unit Price (Rs)": unit_price,
+                    "Amount (Rs)": calculated_amount
                 }
                 st.session_state["data"] = pd.concat([st.session_state["data"], pd.DataFrame([new_row])], ignore_index=True)
-                st.success("Data added successfully!")
+                st.success(f"දත්ත ඇතුළත් විය! මුළු මුදල: රු. {calculated_amount:,.2f}")
                 st.session_state["data"].to_csv("dulshan_pineapple_backup.csv", index=False)
 
     # Tab 2: මාසික වාර්තා සහ PDF ලබා ගැනීම
@@ -78,14 +88,12 @@ def main_app():
         df = st.session_state["data"]
         
         if not df.empty:
-            # පවතින දත්ත වලින් මාස ලැයිස්තුවක් සකසා ගැනීම
             df['Date'] = pd.to_datetime(df['Date'])
             df['YearMonth'] = df['Date'].dt.to_period('M').astype(str)
             available_months = sorted(df['YearMonth'].unique(), reverse=True)
             
             selected_month = st.selectbox("Select Month for Report", available_months)
             
-            # තෝරාගත් මාසයට අදාළ දත්ත පමණක් පෙරීම
             filtered_df = df[df['YearMonth'] == selected_month].copy()
             filtered_df['Date'] = filtered_df['Date'].dt.strftime('%Y-%m-%d')
             filtered_df = filtered_df.drop(columns=['YearMonth'])
@@ -101,7 +109,6 @@ def main_app():
             col3.metric("Expenses", f"Rs. {expenses:,.2f}")
             col4.metric("Net Profit", f"Rs. {net_profit:,.2f}")
 
-            # PDF එකක් සෑදීමේ ශ්‍රිතය
             def generate_pdf(dataframe, month_name):
                 buffer = io.BytesIO()
                 doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -112,8 +119,7 @@ def main_app():
                 elements.append(title)
                 elements.append(Spacer(1, 20))
                 
-                # දත්ත වගුව සකස් කිරීම
-                table_data = [["Date", "Type", "Description", "QTY (kg)", "Amount (Rs)"]] + dataframe[["Date", "Type", "Description", "QTY (kg)", "Amount (Rs)"]].values.tolist()
+                table_data = [["Date", "Type", "Description", "QTY", "Unit Price", "Amount"]] + dataframe[["Date", "Type", "Description", "QTY (kg)", "Unit Price (Rs)", "Amount (Rs)"]].values.tolist()
                 t = Table(table_data)
                 t.setStyle(TableStyle([
                     ('BACKGROUND', (0,0), (-1,0), colors.orange),
