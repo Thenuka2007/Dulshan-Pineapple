@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import datetime
 import io
+import os
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
@@ -11,7 +12,7 @@ from reportlab.lib import colors
 st.set_page_config(page_title="Dulshan Pineapple", layout="wide")
 
 USER_EMAIL = "dulshanpineapple.com"
-USER_PASSWORD = "dulshanpineapple"
+USER_PASSWORD = "dulshan"
 
 # භාෂා සැකසුම් (Translations)
 if "lang" not in st.session_state:
@@ -99,18 +100,24 @@ T = {
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 
+# මූලික තීරු සකස් කිරීම
 REQUIRED_COLUMNS = [
     "ID", "Date", "Type", "Description", "QTY (kg)", "Unit Price (Rs)", "Amount (Rs)", "Payment Method", "Cheque No", "Cheque Date"
 ]
 
+# පැරණි ගොනුවක් ඇත්නම් කියවීම හෝ අලුතින් සෑදීම
 if "data" not in st.session_state:
-    try:
-        loaded_df = pd.read_csv("dulshan_pineapple_backup.csv")
-        if not all(col in loaded_df.columns for col in REQUIRED_COLUMNS):
+    if os.path.exists("dulshan_pineapple_backup.csv"):
+        try:
+            loaded_df = pd.read_csv("dulshan_pineapple_backup.csv")
+            # තීරු නිවැරදිදැයි බලා නිවැරදි කිරීම
+            if list(loaded_df.columns) == REQUIRED_COLUMNS:
+                st.session_state["data"] = loaded_df
+            else:
+                st.session_state["data"] = pd.DataFrame(columns=REQUIRED_COLUMNS)
+        except Exception:
             st.session_state["data"] = pd.DataFrame(columns=REQUIRED_COLUMNS)
-        else:
-            st.session_state["data"] = loaded_df
-    except Exception:
+    else:
         st.session_state["data"] = pd.DataFrame(columns=REQUIRED_COLUMNS)
 
 # භාෂාව තෝරාගැනීමේ Sidebar එක
@@ -169,6 +176,7 @@ def main_app():
             submit = st.form_submit_button(T[lang]["save_btn"])
             
             if submit:
+                # මුළු මුදල ගණනය
                 if qty > 0:
                     calculated_amount = qty * unit_price
                 else:
@@ -179,7 +187,7 @@ def main_app():
                 
                 unique_id = int(datetime.datetime.now().timestamp())
                 
-                new_row = {
+                new_row = pd.DataFrame([{
                     "ID": unique_id,
                     "Date": date.strftime("%Y-%m-%d"),
                     "Type": trans_type,
@@ -190,10 +198,10 @@ def main_app():
                     "Payment Method": pay_method,
                     "Cheque No": final_cheque_no,
                     "Cheque Date": final_cheque_date
-                }
+                }])
                 
-                df_to_add = pd.DataFrame([new_row])[REQUIRED_COLUMNS]
-                st.session_state["data"] = pd.concat([st.session_state["data"][REQUIRED_COLUMNS], df_to_add], ignore_index=True)
+                # පවතින දත්ත ලැයිස්තුවට එකතු කිරීම
+                st.session_state["data"] = pd.concat([st.session_state["data"], new_row], ignore_index=True)
                 st.success(f"{T[lang]['success_save']} {T[lang]['total_amt']}: Rs. {calculated_amount:,.2f}")
                 st.session_state["data"].to_csv("dulshan_pineapple_backup.csv", index=False)
 
@@ -270,7 +278,7 @@ def main_app():
         df = st.session_state["data"]
         
         if not df.empty and len(df) > 0:
-            st.dataframe(df[REQUIRED_COLUMNS], use_container_width=True)
+            st.dataframe(df, use_container_width=True)
             
             st.write("---")
             st.subheader(T[lang]["delete_title"])
