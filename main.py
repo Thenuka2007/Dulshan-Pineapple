@@ -13,7 +13,7 @@ st.set_page_config(page_title="Dulshan Pineapple", layout="wide")
 
 USER_EMAIL = "dulshan.com"
 USER_PASSWORD = "dulshan"
-ADMIN_PASSWORD = "thenuka@2007"  # වාර්තා බැලීමට අවශ්‍ය මුරපදය
+ADMIN_PASSWORD = "dulshanadmin"  # වාර්තා බැලීමට අවශ්‍ය මුරපදය
 
 # භාෂා පරිවර්තන එකතුව
 T = {
@@ -134,7 +134,7 @@ if "data" not in st.session_state:
     else:
         st.session_state["data"] = pd.DataFrame(columns=REQUIRED_COLUMNS)
 
-# භාෂාව තෝරාගැනීමේ Sidebar එක (on_change මඟින් ස්ථාවරව තබා ගනී)
+# භාෂාව තෝරාගැනීමේ Sidebar එක
 def on_lang_change():
     st.session_state["lang"] = st.session_state["sb_lang"]
 
@@ -173,7 +173,7 @@ def main_app():
 
     tab1, tab2, tab3 = st.tabs([T[lang]["tab_entry"], T[lang]["tab_reports"], T[lang]["tab_manage"]])
 
-    # Tab 1: දත්ත ඇතුළත් කිරීම (පාස්වර්ඩ් අවශ්‍ය නැත)
+    # Tab 1: දත්ත ඇතුළත් කිරීම
     with tab1:
         st.subheader(T[lang]["add_trans"])
         with st.form("entry_form", clear_on_submit=True):
@@ -256,12 +256,12 @@ def main_app():
                 st.success(f"{T[lang]['success_save']} {T[lang]['total_amt']}: Rs. {calculated_amount:,.2f}")
                 st.session_state["data"].to_csv("dulshan_pineapple_backup.csv", index=False)
 
-    # ආරක්ෂිත පියවර (Admin Password Verification)
-    def check_admin_access():
+    # ආරක්ෂිත පියවර (Tab එක අනුව වෙනස් වන පරිදි සකසා ඇත)
+    def check_admin_access(unique_tab_key):
         if not st.session_state["admin_verified"]:
             st.write(f"### {T[lang]['admin_locked']}")
-            admin_pass = st.text_input("Admin Password", type="password", key="admin_pwd_field")
-            if st.button(T[lang]["admin_btn"], key="admin_btn_key"):
+            admin_pass = st.text_input("Admin Password", type="password", key=f"admin_pwd_{unique_tab_key}")
+            if st.button(T[lang]["admin_btn"], key=f"admin_btn_{unique_tab_key}"):
                 if admin_pass == ADMIN_PASSWORD:
                     st.session_state["admin_verified"] = True
                     st.rerun()
@@ -270,9 +270,9 @@ def main_app():
             return False
         return True
 
-    # Tab 2: මාසික වාර්තා සහ වක්‍ර ප්‍රස්ථාර (මුරපදයෙන් ආරක්ෂිතයි)
+    # Tab 2: මාසික වාර්තා සහ වක්‍ර ප්‍රස්ථාර
     with tab2:
-        if check_admin_access():
+        if check_admin_access("reports_tab"):
             st.subheader(T[lang]["tab_reports"])
             df = st.session_state["data"]
             
@@ -297,11 +297,9 @@ def main_app():
                 col3.metric(T[lang]["expenses"], f"Rs. {expenses:,.2f}")
                 col4.metric(T[lang]["net_profit"], f"Rs. {net_profit:,.2f}")
 
-                # වක්‍ර ප්‍රස්ථාරය (Line Chart) සෑදීම
                 st.write(f"### {T[lang]['chart_title']}")
                 chart_df = df_temp.groupby(['YearMonth', 'Type'])['Amount (Rs)'].sum().unstack(fill_value=0)
                 
-                # භාෂාව අනුව තීරු ගැලපීම
                 sales_col = T[lang]["sales"] if T[lang]["sales"] in chart_df.columns else None
                 pur_col = T[lang]["purchase"] if T[lang]["purchase"] in chart_df.columns else None
                 exp_col = T[lang]["expenses"] if T[lang]["expenses"] in chart_df.columns else None
@@ -349,9 +347,9 @@ def main_app():
             else:
                 st.info(T[lang]["no_data"])
 
-    # Tab 3: දත්ත කළමනාකරණය (මුරපදයෙන් ආරක්ෂිතයි)
+    # Tab 3: දත්ත කළමනාකරණය
     with tab3:
-        if check_admin_access():
+        if check_admin_access("manage_tab"):
             st.subheader(T[lang]["tab_manage"])
             df = st.session_state["data"]
             
