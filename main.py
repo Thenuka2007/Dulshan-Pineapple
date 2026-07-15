@@ -53,7 +53,7 @@ T = {
         "delete_title": "වැරදුණු ගනුදෙනුවක් මකා දමන්න",
         "delete_select": "මකා දැමිය යුතු ගනුදෙනුව තෝරන්න",
         "delete_btn": "තෝරාගත් ගනුදෙනුව මකා දමන්න",
-        "delete_success": "ගනුදෙනුව සාර්ථකව මකා දමන ලදී!",
+        "delete_success": "ගනුදෙනුව සාර්ථකව මකා දමන ลදී!",
         "p_types": "අන්නාසි වර්ග (Pineapple Types)",
         "qty_lbl": "ප්‍රමාණය (kg)",
         "price_lbl": "ඒකක මිල (රු.)"
@@ -102,7 +102,7 @@ T = {
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 
-# අලුත් ව්‍යුහයට අනුව තීරු සැකසීම
+# මූලික තීරු සැකසීම
 REQUIRED_COLUMNS = [
     "ID", "Date", "Type", "Description", 
     "T1_QTY", "T1_Price", "T2_QTY", "T2_Price", 
@@ -171,26 +171,25 @@ def main_app():
 
             st.write(f"### {T[lang]['p_types']}")
             
-            # වර්ග 1 සිට 5 දක්වා Input Rows
-            t_data = {}
+            # සාමාන්‍ය ධන සෘණ ලකුණු නැති සරල කොටු (Text inputs) බවට පත් කිරීම
+            t_inputs = {}
             for i in range(1, 6):
                 c1, c2, c3 = st.columns([2, 3, 3])
                 with c1:
                     st.markdown(f"<div style='padding-top:25px;'><b>Type {i}</b></div>", unsafe_allow_html=True)
                 with c2:
-                    t_data[f"T{i}_QTY"] = st.number_input(f"{T[lang]['qty_lbl']} - T{i}", min_value=0.0, step=0.1, key=f"t{i}_q")
+                    t_inputs[f"T{i}_QTY"] = st.text_input(f"{T[lang]['qty_lbl']} - T{i}", value="0", key=f"t{i}_q")
                 with c3:
-                    t_data[f"T{i}_Price"] = st.number_input(f"{T[lang]['price_lbl']} - T{i}", min_value=0.0, step=1.0, key=f"t{i}_p")
+                    t_inputs[f"T{i}_Price"] = st.text_input(f"{T[lang]['price_lbl']} - T{i}", value="0", key=f"t{i}_p")
             
             st.write("---")
-            # සාමාන්‍ය වියදම් හෝ වෙනත් දේ සඳහා වෙනම Row එකක්
             c1, c2, c3 = st.columns([2, 3, 3])
             with c1:
                 st.markdown("<div style='padding-top:25px;'><b>Expenses / Other</b></div>", unsafe_allow_html=True)
             with c2:
-                other_qty = st.number_input(f"{T[lang]['qty_lbl']} / Items", min_value=0.0, step=0.1, key="oth_q")
+                other_qty_in = st.text_input(f"{T[lang]['qty_lbl']} / Items", value="0", key="oth_q")
             with c3:
-                other_price = st.number_input(f"{T[lang]['price_lbl']} / Amount", min_value=0.0, step=1.0, key="oth_p")
+                other_price_in = st.text_input(f"{T[lang]['price_lbl']} / Amount", value="0", key="oth_p")
 
             st.write("---")
             col_c, col_d = st.columns(2)
@@ -202,18 +201,33 @@ def main_app():
             submit = st.form_submit_button(T[lang]["save_btn"], use_container_width=True)
             
             if submit:
+                # ඇතුළත් කළ අගයන් Float/Int බවට හැරවීම (වැරදි අගයන් ඇතුළත් කළහොත් 0 ලෙස ගනී)
+                def to_num(val, is_float=True):
+                    try:
+                        return float(val) if is_float else int(float(val))
+                    except ValueError:
+                        return 0.0 if is_float else 0
+
+                t_data = {}
+                for i in range(1, 6):
+                    t_data[f"T{i}_QTY"] = to_num(t_inputs[f"T{i}_QTY"], is_float=True)
+                    t_data[f"T{i}_Price"] = to_num(t_inputs[f"T{i}_Price"], is_float=False)
+                
+                oth_qty = to_num(other_qty_in, is_float=True)
+                oth_price = to_num(other_price_in, is_float=False)
+
                 # මුළු මුදල ගණනය කිරීම
                 calculated_amount = 0.0
                 for i in range(1, 6):
                     calculated_amount += t_data[f"T{i}_QTY"] * t_data[f"T{i}_Price"]
                 
                 if trans_type == T[lang]["expenses"]:
-                    calculated_amount += other_price
+                    calculated_amount += oth_price
                 else:
-                    if other_qty > 0:
-                        calculated_amount += other_qty * other_price
+                    if oth_qty > 0:
+                        calculated_amount += oth_qty * oth_price
                     else:
-                        calculated_amount += other_price
+                        calculated_amount += oth_price
                 
                 final_cheque_no = cheque_no if pay_method == T[lang]["cheque"] else "-"
                 final_cheque_date = cheque_date.strftime("%Y-%m-%d") if pay_method == T[lang]["cheque"] else "-"
@@ -229,8 +243,8 @@ def main_app():
                     "T3_QTY": t_data["T3_QTY"], "T3_Price": t_data["T3_Price"],
                     "T4_QTY": t_data["T4_QTY"], "T4_Price": t_data["T4_Price"],
                     "T5_QTY": t_data["T5_QTY"], "T5_Price": t_data["T5_Price"],
-                    "Total Expenses/Other QTY": other_qty,
-                    "Other Price": other_price,
+                    "Total Expenses/Other QTY": oth_qty,
+                    "Other Price": oth_price,
                     "Amount (Rs)": calculated_amount,
                     "Payment Method": pay_method,
                     "Cheque No": final_cheque_no,
@@ -279,7 +293,6 @@ def main_app():
                 elements.append(title)
                 elements.append(Spacer(1, 20))
                 
-                # PDF එකට වැදගත් තීරු පමණක් තේරීම
                 summary_cols = ["Date", "Type", "Description", "Amount (Rs)", "Payment Method"]
                 pdf_df = dataframe[summary_cols]
                 table_data = [list(pdf_df.columns)] + pdf_df.values.tolist()
