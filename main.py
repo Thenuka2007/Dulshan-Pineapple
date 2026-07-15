@@ -11,8 +11,8 @@ from reportlab.lib import colors
 # පිටුවේ සැකසුම්
 st.set_page_config(page_title="Dulshan Pineapple", layout="wide")
 
-USER_EMAIL = "dulshanpineapple.com"
-USER_PASSWORD = "dulshan"
+USER_EMAIL = "dulshan@pineapple.com"
+USER_PASSWORD = "mysecretpassword123"
 
 # භාෂා සැකසුම් (Translations)
 if "lang" not in st.session_state:
@@ -31,9 +31,7 @@ T = {
         "add_trans": "නව ගනුදෙනුවක් ඇතුළත් කරන්න",
         "date": "දිනය",
         "type": "ගනුදෙනු වර්ගය",
-        "desc": "විස්තරය",
-        "qty": "ඒකක ගණන (QTY - kg)",
-        "unit_price": "ඒකකයක මිල (රු.)",
+        "desc": "විස්තරය (පාරිභෝගිකයා / සැපයුම්කරු / විස්තර)",
         "pay_method": "ගෙවීම් ක්‍රමය",
         "cheque_no": "චෙක්පත් අංකය (චෙක්පත් නම් පමණක්)",
         "cheque_date": "චෙක්පත් දිනය (චෙක්පත් නම් පමණක්)",
@@ -55,7 +53,10 @@ T = {
         "delete_title": "වැරදුණු ගනුදෙනුවක් මකා දමන්න",
         "delete_select": "මකා දැමිය යුතු ගනුදෙනුව තෝරන්න",
         "delete_btn": "තෝරාගත් ගනුදෙනුව මකා දමන්න",
-        "delete_success": "ගනුදෙනුව සාර්ථකව මකා දමන ලදී!"
+        "delete_success": "ගනුදෙනුව සාර්ථකව මකා දමන ලදී!",
+        "p_types": "අන්නාසි වර්ග (Pineapple Types)",
+        "qty_lbl": "ප්‍රමාණය (kg)",
+        "price_lbl": "ඒකක මිල (රු.)"
     },
     "English": {
         "title": "🍍 Dulshan Pineapple Management",
@@ -68,9 +69,7 @@ T = {
         "add_trans": "Add New Transaction",
         "date": "Date",
         "type": "Transaction Type",
-        "desc": "Description",
-        "qty": "Quantity (QTY - kg)",
-        "unit_price": "Unit Price (Rs.)",
+        "desc": "Description (Customer / Supplier / Details)",
         "pay_method": "Payment Method",
         "cheque_no": "Cheque Number (If Cheque)",
         "cheque_date": "Cheque Date (If Cheque)",
@@ -92,7 +91,10 @@ T = {
         "delete_title": "Delete a Transaction",
         "delete_select": "Select Transaction to Delete",
         "delete_btn": "Delete Selected Transaction",
-        "delete_success": "Transaction deleted successfully!"
+        "delete_success": "Transaction deleted successfully!",
+        "p_types": "Pineapple Types",
+        "qty_lbl": "QTY (kg)",
+        "price_lbl": "Unit Price (Rs.)"
     }
 }
 
@@ -100,18 +102,20 @@ T = {
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 
-# මූලික තීරු සකස් කිරීම
+# අලුත් ව්‍යුහයට අනුව තීරු සැකසීම
 REQUIRED_COLUMNS = [
-    "ID", "Date", "Type", "Description", "QTY (kg)", "Unit Price (Rs)", "Amount (Rs)", "Payment Method", "Cheque No", "Cheque Date"
+    "ID", "Date", "Type", "Description", 
+    "T1_QTY", "T1_Price", "T2_QTY", "T2_Price", 
+    "T3_QTY", "T3_Price", "T4_QTY", "T4_Price", 
+    "T5_QTY", "T5_Price", "Total Expenses/Other QTY", "Other Price",
+    "Amount (Rs)", "Payment Method", "Cheque No", "Cheque Date"
 ]
 
-# පැරණි ගොනුවක් ඇත්නම් කියවීම හෝ අලුතින් සෑදීම
 if "data" not in st.session_state:
     if os.path.exists("dulshan_pineapple_backup.csv"):
         try:
             loaded_df = pd.read_csv("dulshan_pineapple_backup.csv")
-            # තීරු නිවැරදිදැයි බලා නිවැරදි කිරීම
-            if list(loaded_df.columns) == REQUIRED_COLUMNS:
+            if all(col in loaded_df.columns for col in REQUIRED_COLUMNS):
                 st.session_state["data"] = loaded_df
             else:
                 st.session_state["data"] = pd.DataFrame(columns=REQUIRED_COLUMNS)
@@ -127,17 +131,14 @@ with st.sidebar:
 
 lang = st.session_state["lang"]
 
-# 1. Login පිටුව
 def login_page():
     st.markdown(f"<h2 style='text-align: center; color: #FFA500;'>{T[lang]['title']}</h2>", unsafe_allow_html=True)
     st.markdown(f"<p style='text-align: center;'>{T[lang]['subtitle']}</p>", unsafe_allow_html=True)
-    
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         email = st.text_input("Email")
         password = st.text_input("Password", type="password")
         login_btn = st.button(T[lang]["login"], use_container_width=True)
-        
         if login_btn:
             if email == USER_EMAIL and password == USER_PASSWORD:
                 st.session_state["logged_in"] = True
@@ -145,7 +146,6 @@ def login_page():
             else:
                 st.error("Invalid credentials! / ඇතුළත් කළ තොරතුරු වැරදියි!")
 
-# 2. ප්‍රධාන මෘදුකාංග පිටුව
 def main_app():
     col1, col2 = st.columns([8, 2])
     with col1:
@@ -161,47 +161,84 @@ def main_app():
     with tab1:
         st.subheader(T[lang]["add_trans"])
         with st.form("entry_form", clear_on_submit=True):
-            date = st.date_input(T[lang]["date"], datetime.date.today())
-            trans_type = st.selectbox(T[lang]["type"], [T[lang]["sales"], T[lang]["purchase"], T[lang]["expenses"]])
-            desc = st.text_input(T[lang]["desc"])
+            col_a, col_b = st.columns(2)
+            with col_a:
+                date = st.date_input(T[lang]["date"], datetime.date.today())
+                trans_type = st.selectbox(T[lang]["type"], [T[lang]["sales"], T[lang]["purchase"], T[lang]["expenses"]])
+            with col_b:
+                desc = st.text_input(T[lang]["desc"])
+                pay_method = st.selectbox(T[lang]["pay_method"], [T[lang]["cash"], T[lang]["cheque"]])
+
+            st.write(f"### {T[lang]['p_types']}")
             
-            qty = st.number_input(T[lang]["qty"], min_value=0.0, step=0.1, value=0.0)
-            unit_price = st.number_input(T[lang]["unit_price"], min_value=0.0, step=1.0, value=0.0)
+            # වර්ග 1 සිට 5 දක්වා Input Rows
+            t_data = {}
+            for i in range(1, 6):
+                c1, c2, c3 = st.columns([2, 3, 3])
+                with c1:
+                    st.markdown(f"<div style='padding-top:25px;'><b>Type {i}</b></div>", unsafe_allow_html=True)
+                with c2:
+                    t_data[f"T{i}_QTY"] = st.number_input(f"{T[lang]['qty_lbl']} - T{i}", min_value=0.0, step=0.1, key=f"t{i}_q")
+                with c3:
+                    t_data[f"T{i}_Price"] = st.number_input(f"{T[lang]['price_lbl']} - T{i}", min_value=0.0, step=1.0, key=f"t{i}_p")
             
-            pay_method = st.selectbox(T[lang]["pay_method"], [T[lang]["cash"], T[lang]["cheque"]])
-            
-            cheque_no = st.text_input(T[lang]["cheque_no"])
-            cheque_date = st.date_input(T[lang]["cheque_date"], datetime.date.today())
-            
-            submit = st.form_submit_button(T[lang]["save_btn"])
+            st.write("---")
+            # සාමාන්‍ය වියදම් හෝ වෙනත් දේ සඳහා වෙනම Row එකක්
+            c1, c2, c3 = st.columns([2, 3, 3])
+            with c1:
+                st.markdown("<div style='padding-top:25px;'><b>Expenses / Other</b></div>", unsafe_allow_html=True)
+            with c2:
+                other_qty = st.number_input(f"{T[lang]['qty_lbl']} / Items", min_value=0.0, step=0.1, key="oth_q")
+            with c3:
+                other_price = st.number_input(f"{T[lang]['price_lbl']} / Amount", min_value=0.0, step=1.0, key="oth_p")
+
+            st.write("---")
+            col_c, col_d = st.columns(2)
+            with col_c:
+                cheque_no = st.text_input(T[lang]["cheque_no"])
+            with col_d:
+                cheque_date = st.date_input(T[lang]["cheque_date"], datetime.date.today())
+
+            submit = st.form_submit_button(T[lang]["save_btn"], use_container_width=True)
             
             if submit:
-                # මුළු මුදල ගණනය
-                if qty > 0:
-                    calculated_amount = qty * unit_price
+                # මුළු මුදල ගණනය කිරීම
+                calculated_amount = 0.0
+                for i in range(1, 6):
+                    calculated_amount += t_data[f"T{i}_QTY"] * t_data[f"T{i}_Price"]
+                
+                if trans_type == T[lang]["expenses"]:
+                    calculated_amount += other_price
                 else:
-                    calculated_amount = unit_price
+                    if other_qty > 0:
+                        calculated_amount += other_qty * other_price
+                    else:
+                        calculated_amount += other_price
                 
                 final_cheque_no = cheque_no if pay_method == T[lang]["cheque"] else "-"
                 final_cheque_date = cheque_date.strftime("%Y-%m-%d") if pay_method == T[lang]["cheque"] else "-"
-                
                 unique_id = int(datetime.datetime.now().timestamp())
                 
-                new_row = pd.DataFrame([{
+                new_row = {
                     "ID": unique_id,
                     "Date": date.strftime("%Y-%m-%d"),
                     "Type": trans_type,
                     "Description": desc,
-                    "QTY (kg)": qty,
-                    "Unit Price (Rs)": unit_price,
+                    "T1_QTY": t_data["T1_QTY"], "T1_Price": t_data["T1_Price"],
+                    "T2_QTY": t_data["T2_QTY"], "T2_Price": t_data["T2_Price"],
+                    "T3_QTY": t_data["T3_QTY"], "T3_Price": t_data["T3_Price"],
+                    "T4_QTY": t_data["T4_QTY"], "T4_Price": t_data["T4_Price"],
+                    "T5_QTY": t_data["T5_QTY"], "T5_Price": t_data["T5_Price"],
+                    "Total Expenses/Other QTY": other_qty,
+                    "Other Price": other_price,
                     "Amount (Rs)": calculated_amount,
                     "Payment Method": pay_method,
                     "Cheque No": final_cheque_no,
                     "Cheque Date": final_cheque_date
-                }])
+                }
                 
-                # පවතින දත්ත ලැයිස්තුවට එකතු කිරීම
-                st.session_state["data"] = pd.concat([st.session_state["data"], new_row], ignore_index=True)
+                new_row_df = pd.DataFrame([new_row])[REQUIRED_COLUMNS]
+                st.session_state["data"] = pd.concat([st.session_state["data"], new_row_df], ignore_index=True)
                 st.success(f"{T[lang]['success_save']} {T[lang]['total_amt']}: Rs. {calculated_amount:,.2f}")
                 st.session_state["data"].to_csv("dulshan_pineapple_backup.csv", index=False)
 
@@ -242,7 +279,9 @@ def main_app():
                 elements.append(title)
                 elements.append(Spacer(1, 20))
                 
-                pdf_df = dataframe.drop(columns=["ID"])
+                # PDF එකට වැදගත් තීරු පමණක් තේරීම
+                summary_cols = ["Date", "Type", "Description", "Amount (Rs)", "Payment Method"]
+                pdf_df = dataframe[summary_cols]
                 table_data = [list(pdf_df.columns)] + pdf_df.values.tolist()
                 
                 t = Table(table_data)
@@ -251,7 +290,7 @@ def main_app():
                     ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
                     ('ALIGN', (0,0), (-1,-1), 'CENTER'),
                     ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0,0), (-1,-1), 8),
+                    ('FONTSIZE', (0,0), (-1,-1), 9),
                     ('BOTTOMPADDING', (0,0), (-1,0), 6),
                     ('BACKGROUND', (0,1), (-1,-1), colors.beige),
                     ('GRID', (0,0), (-1,-1), 0.5, colors.black)
@@ -285,7 +324,7 @@ def main_app():
             
             delete_id = st.selectbox(T[lang]["delete_select"], 
                                     options=df["ID"].tolist(),
-                                    format_func=lambda x: f"ID: {x} | {df[df['ID'] == x]['Date'].values[0]} - {df[df['ID'] == x]['Description'].values[0]}")
+                                    format_func=lambda x: f"ID: {x} | {df[df['ID'] == x]['Date'].values[0]} - {df[df['ID'] == x]['Description'].values[0]} | Rs. {df[df['ID'] == x]['Amount (Rs)'].values[0]:,.2f}")
             
             if st.button(T[lang]["delete_btn"], type="primary"):
                 st.session_state["data"] = df[df["ID"] != delete_id]
