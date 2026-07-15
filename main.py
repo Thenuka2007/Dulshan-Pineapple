@@ -11,8 +11,8 @@ from reportlab.lib import colors
 # පිටුවේ සැකසුම්
 st.set_page_config(page_title="Dulshan Pineapple", layout="wide")
 
-USER_EMAIL = "dulshan@pineapple.com"
-USER_PASSWORD = "mysecretpassword123"
+USER_EMAIL = "dulshan.com"
+USER_PASSWORD = "dulshan"
 
 # භාෂා සැකසුම් (Translations)
 if "lang" not in st.session_state:
