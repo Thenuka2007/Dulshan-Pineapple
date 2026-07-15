@@ -11,9 +11,12 @@ from reportlab.lib import colors
 # පිටුවේ සැකසුම්
 st.set_page_config(page_title="Dulshan Pineapple", layout="wide")
 
-USER_EMAIL = "dulshan.com"
-USER_PASSWORD = "dulshan"
-ADMIN_PASSWORD = "dulshanadmin"  # වාර්තා බැලීමට අවශ්‍ය මුරපදය
+USER_EMAIL = "dulshan"
+USER_PASSWORD = "dulshan123"
+
+# Admin සඳහා වෙනම Username සහ Password
+ADMIN_USER = "thenukadulshan"
+ADMIN_PASSWORD = "20070729"
 
 # භාෂා පරිවර්තන එකතුව
 T = {
@@ -43,7 +46,7 @@ T = {
         "select_month": "වාර්තාව අවශ්‍ය මාසය තෝරන්න",
         "tot_purchase": "මුළු මිලදී ගැනීම්",
         "tot_sales": "මුළු විකුණුම්",
-        "net_profit": "ශුද්ධ ලාභය",
+        "net_profit": "ශුද්ධ ลාභය",
         "pdf_btn": "PDF වාර්තාව සාදන්න",
         "pdf_download": "PDF එක බාගත කරගන්න",
         "no_data": "තවමත් දත්ත ඇතුළත් කර නොමැත.",
@@ -54,9 +57,9 @@ T = {
         "p_types": "අන්නාසි වර්ග (Pineapple Types)",
         "qty_lbl": "ප්‍රමාණය (kg)",
         "price_lbl": "ඒකක මිල (රු.)",
-        "admin_locked": "🔒 මෙම තොරතුරු බැලීමට Admin මුරපදය ඇතුළත් කරන්න",
+        "admin_locked": "🔒 මෙම තොරතුරු බැලීමට Admin පරිශීලක නාමය සහ මුරපදය ඇතුළත් කරන්න",
         "admin_btn": "තහවුරු කරන්න",
-        "wrong_pass": "මුරපදය වැරදියි!",
+        "wrong_pass": "ඇතුළත් කළ තොරතුරු වැරදියි!",
         "chart_title": "📊 මාසික ප්‍රගති වක්‍රය (ගැනුම්, විකුණුම්, වියදම් සහ ලාභය)"
     },
     "English": {
@@ -96,9 +99,9 @@ T = {
         "p_types": "Pineapple Types",
         "qty_lbl": "QTY (kg)",
         "price_lbl": "Unit Price (Rs.)",
-        "admin_locked": "🔒 Enter Admin Password to View This Section",
+        "admin_locked": "🔒 Enter Admin Username and Password to View This Section",
         "admin_btn": "Verify",
-        "wrong_pass": "Incorrect Password!",
+        "wrong_pass": "Invalid Admin Credentials!",
         "chart_title": "📊 Monthly Progress Line Chart (Purchases, Sales, Expenses & Profit)"
     }
 }
@@ -173,7 +176,7 @@ def main_app():
 
     tab1, tab2, tab3 = st.tabs([T[lang]["tab_entry"], T[lang]["tab_reports"], T[lang]["tab_manage"]])
 
-    # Tab 1: දත්ත ඇතුළත් කිරීම
+    # Tab 1: දත්ත ඇතුළත් කිරීම (මීට කිසිදු අවහිරතාවයක් නැත)
     with tab1:
         st.subheader(T[lang]["add_trans"])
         with st.form("entry_form", clear_on_submit=True):
@@ -256,13 +259,18 @@ def main_app():
                 st.success(f"{T[lang]['success_save']} {T[lang]['total_amt']}: Rs. {calculated_amount:,.2f}")
                 st.session_state["data"].to_csv("dulshan_pineapple_backup.csv", index=False)
 
-    # ආරක්ෂිත පියවර (Tab එක අනුව වෙනස් වන පරිදි සකසා ඇත)
+    # ආරක්ෂිත පියවර (Username සහ Password මඟින් ලොග් වීම)
     def check_admin_access(unique_tab_key):
         if not st.session_state["admin_verified"]:
             st.write(f"### {T[lang]['admin_locked']}")
-            admin_pass = st.text_input("Admin Password", type="password", key=f"admin_pwd_{unique_tab_key}")
-            if st.button(T[lang]["admin_btn"], key=f"admin_btn_{unique_tab_key}"):
-                if admin_pass == ADMIN_PASSWORD:
+            c1, c2 = st.columns(2)
+            with c1:
+                admin_username = st.text_input("Admin Username", key=f"admin_user_{unique_tab_key}")
+            with c2:
+                admin_pass = st.text_input("Admin Password", type="password", key=f"admin_pwd_{unique_tab_key}")
+                
+            if st.button(T[lang]["admin_btn"], key=f"admin_btn_{unique_tab_key}", use_container_width=True):
+                if admin_username == ADMIN_USER and admin_pass == ADMIN_PASSWORD:
                     st.session_state["admin_verified"] = True
                     st.rerun()
                 else:
