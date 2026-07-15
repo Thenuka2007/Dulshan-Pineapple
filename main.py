@@ -11,12 +11,11 @@ from reportlab.lib import colors
 # පිටුවේ සැකසුම්
 st.set_page_config(page_title="Dulshan Pineapple", layout="wide")
 
-USER_EMAIL = "dulshan"
-USER_PASSWORD = "dulshan123"
-
-# Admin සඳහා වෙනම Username සහ Password
-ADMIN_USER = "thenukadulshan"
-ADMIN_PASSWORD = "20070729"
+# පරිශීලක ගිණුම් විස්තර (Credentials) - ඔබ ලබා දුන් නවතම විස්තර
+CREDENTIALS = {
+    "thenukadulshan": {"password": "Thenuka@2007", "role": "admin"},
+    "dulshan": {"password": "1234", "role": "data_entry"}
+}
 
 # භාෂා පරිවර්තන එකතුව
 T = {
@@ -46,7 +45,7 @@ T = {
         "select_month": "වාර්තාව අවශ්‍ය මාසය තෝරන්න",
         "tot_purchase": "මුළු මිලදී ගැනීම්",
         "tot_sales": "මුළු විකුණුම්",
-        "net_profit": "ශුද්ධ ลාභය",
+        "net_profit": "ශුද්ධ ලාභය",
         "pdf_btn": "PDF වාර්තාව සාදන්න",
         "pdf_download": "PDF එක බාගත කරගන්න",
         "no_data": "තවමත් දත්ත ඇතුළත් කර නොමැත.",
@@ -57,9 +56,7 @@ T = {
         "p_types": "අන්නාසි වර්ග (Pineapple Types)",
         "qty_lbl": "ප්‍රමාණය (kg)",
         "price_lbl": "ඒකක මිල (රු.)",
-        "admin_locked": "🔒 මෙම තොරතුරු බැලීමට Admin පරිශීලක නාමය සහ මුරපදය ඇතුළත් කරන්න",
-        "admin_btn": "තහවුරු කරන්න",
-        "wrong_pass": "ඇතුළත් කළ තොරතුරු වැරදියි!",
+        "wrong_pass": "ඇතුළත් කළ පරිශීලක නාමය හෝ මුරපදය වැරදියි!",
         "chart_title": "📊 මාසික ප්‍රගති වක්‍රය (ගැනුම්, විකුණුම්, වියදම් සහ ලාභය)"
     },
     "English": {
@@ -99,9 +96,7 @@ T = {
         "p_types": "Pineapple Types",
         "qty_lbl": "QTY (kg)",
         "price_lbl": "Unit Price (Rs.)",
-        "admin_locked": "🔒 Enter Admin Username and Password to View This Section",
-        "admin_btn": "Verify",
-        "wrong_pass": "Invalid Admin Credentials!",
+        "wrong_pass": "Invalid username or password!",
         "chart_title": "📊 Monthly Progress Line Chart (Purchases, Sales, Expenses & Profit)"
     }
 }
@@ -109,8 +104,8 @@ T = {
 # සැසි සහ දත්ත ආරම්භ කිරීම
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
-if "admin_verified" not in st.session_state:
-    st.session_state["admin_verified"] = False
+if "user_role" not in st.session_state:
+    st.session_state["user_role"] = None
 
 # භාෂාව මාරු කරන තෙක් නොවෙනස්ව තබා ගැනීම (Persistence)
 if "lang" not in st.session_state:
@@ -154,15 +149,17 @@ def login_page():
     st.markdown(f"<p style='text-align: center;'>{T[lang]['subtitle']}</p>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        email = st.text_input("Email")
+        # Username හෝ Email එකක් ලෙස භාවිතා කළ හැක
+        username = st.text_input("Username / Email")
         password = st.text_input("Password", type="password")
         login_btn = st.button(T[lang]["login"], use_container_width=True)
         if login_btn:
-            if email == USER_EMAIL and password == USER_PASSWORD:
+            if username in CREDENTIALS and CREDENTIALS[username]["password"] == password:
                 st.session_state["logged_in"] = True
+                st.session_state["user_role"] = CREDENTIALS[username]["role"]
                 st.rerun()
             else:
-                st.error("Invalid credentials! / ඇතුළත් කළ තොරතුරු වැරදියි!")
+                st.error(T[lang]["wrong_pass"])
 
 def main_app():
     col1, col2 = st.columns([8, 2])
@@ -171,13 +168,26 @@ def main_app():
     with col2:
         if st.button(T[lang]["logout"]):
             st.session_state["logged_in"] = False
-            st.session_state["admin_verified"] = False
+            st.session_state["user_role"] = None
             st.rerun()
 
-    tab1, tab2, tab3 = st.tabs([T[lang]["tab_entry"], T[lang]["tab_reports"], T[lang]["tab_manage"]])
+    # පරිශීලකයාගේ Role එක අනුව Tabs පාලනය කිරීම
+    if st.session_state["user_role"] == "admin":
+        tabs_list = [T[lang]["tab_entry"], T[lang]["tab_reports"], T[lang]["tab_manage"]]
+        tabs = st.tabs(tabs_list)
+        show_reports = True
+        show_manage = True
+        t_entry, t_reports, t_manage = tabs[0], tabs[1], tabs[2]
+    else:
+        # Data Entry කෙනෙක්ට පෙනෙන්නේ එක Tab එකක් පමණි. වෙනත් කිසිවක් සෙවිය නොහැක.
+        tabs_list = [T[lang]["tab_entry"]]
+        tabs = st.tabs(tabs_list)
+        show_reports = False
+        show_manage = False
+        t_entry = tabs[0]
 
-    # Tab 1: දත්ත ඇතුළත් කිරීම (මීට කිසිදු අවහිරතාවයක් නැත)
-    with tab1:
+    # Tab 1: දත්ත ඇතුළත් කිරීම
+    with t_entry:
         st.subheader(T[lang]["add_trans"])
         with st.form("entry_form", clear_on_submit=True):
             col_a, col_b = st.columns(2)
@@ -259,28 +269,9 @@ def main_app():
                 st.success(f"{T[lang]['success_save']} {T[lang]['total_amt']}: Rs. {calculated_amount:,.2f}")
                 st.session_state["data"].to_csv("dulshan_pineapple_backup.csv", index=False)
 
-    # ආරක්ෂිත පියවර (Username සහ Password මඟින් ලොග් වීම)
-    def check_admin_access(unique_tab_key):
-        if not st.session_state["admin_verified"]:
-            st.write(f"### {T[lang]['admin_locked']}")
-            c1, c2 = st.columns(2)
-            with c1:
-                admin_username = st.text_input("Admin Username", key=f"admin_user_{unique_tab_key}")
-            with c2:
-                admin_pass = st.text_input("Admin Password", type="password", key=f"admin_pwd_{unique_tab_key}")
-                
-            if st.button(T[lang]["admin_btn"], key=f"admin_btn_{unique_tab_key}", use_container_width=True):
-                if admin_username == ADMIN_USER and admin_pass == ADMIN_PASSWORD:
-                    st.session_state["admin_verified"] = True
-                    st.rerun()
-                else:
-                    st.error(T[lang]["wrong_pass"])
-            return False
-        return True
-
-    # Tab 2: මාසික වාර්තා සහ වක්‍ර ප්‍රස්ථාර
-    with tab2:
-        if check_admin_access("reports_tab"):
+    # Tab 2: මාසික වාර්තා සහ වක්‍ර ප්‍රස්ථාර (Admin ට පමණි)
+    if show_reports:
+        with t_reports:
             st.subheader(T[lang]["tab_reports"])
             df = st.session_state["data"]
             
@@ -355,9 +346,9 @@ def main_app():
             else:
                 st.info(T[lang]["no_data"])
 
-    # Tab 3: දත්ත කළමනාකරණය
-    with tab3:
-        if check_admin_access("manage_tab"):
+    # Tab 3: දත්ත කළමනාකරණය (Admin ට පමණි)
+    if show_manage:
+        with t_manage:
             st.subheader(T[lang]["tab_manage"])
             df = st.session_state["data"]
             
